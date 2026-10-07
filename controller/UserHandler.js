@@ -1,5 +1,20 @@
-import { db } from "../app.js";
+import { db } from "../db.js";
 
+export async function GetUserData(req, res, next) {
+  try {
+    const results = await db.query(`SELECT id, email, role
+      FROM users
+      ORDER BY id`);
+    console.log("req on getUserData", results);
+    res.status(200).json({
+      message: "Users fetched successfully",
+      data: results.rows,
+    });
+  } catch (err) {
+    console.log("error", err);
+    next(err);
+  }
+}
 export async function PostUsers(req, res) {
   const userData = Object.values(req.body);
   console.log("here is the values", userData);

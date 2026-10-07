@@ -1,18 +1,17 @@
 import express from "express";
-import pg from "pg";
 import "dotenv/config";
+import cookieParser from "cookie-parser";
 
-import * as userHandeler from "./controller/UserHandler.js";
+import { db } from "./db.js";
+import authRoutes from "./routes/authRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
-const { Pool } = pg;
+
 app.use(express.json());
-export const db = new Pool({
-  connectionString: process.env.NEON_DB,
-  ssl: {
-    rejectUnauthorized: true,
-  },
-});
+app.use(cookieParser());
 
 try {
   const client = await db.connect();
@@ -21,40 +20,14 @@ try {
 } catch (err) {
   console.log("Something went wrong", err);
 }
-async function GetUserData(_, res, next) {
-  try {
-    const user = await db.query("SELECT * FROM users");
-    console.log("database connected");
-    console.log("the users data", user.rows);
-    res.json({ data: user.rows });
-  } catch (err) {
-    console.log("error", err);
-    next(err);
-  }
-}
 
-app.get("/users", GetUserData);
-// app.get("/users/:id", async (req, res) => {
-//   const singleUser = await db.query("SELECT * FROM users WHERE id=$1", [
-//     req.params.id,
-//   ]);
-//   res.json({ data: singleUser.rows });
-// });
-app.get("/users/:id", userHandeler.GetUserById);
-app.post("/users", userHandeler.PostUsers);
-app.put("/users/:id", userHandeler.updateUserById);
-app.patch("/users/:id", userHandeler.updateUserById);
-app.delete("/users/:id", userHandeler.DeleteUsers);
+app.use("/auth", authRoutes);
+app.use("/products", productRoutes);
+app.use("/users", userRoutes);
 
-app.delete("/users", (req, res) => {
-  res.send("Hello World");
-});
+// must be the LAST app.use() — this only runs when next(err) is called
+app.use(errorHandler);
 
-app.use((err, _, res, next) => {
-  res.json({ message: err });
-});
-
-// export default app;
 app.listen(process.env.PORT, () => {
   console.log(`Server is running on port ${process.env.PORT}`);
 });
